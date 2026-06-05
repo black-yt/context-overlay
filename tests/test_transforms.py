@@ -106,6 +106,31 @@ def test_regex_replace() -> None:
     assert out["messages"][0]["content"] == "new prompt"
 
 
+def test_regex_replace_can_target_user_message() -> None:
+    config = ContextOverlayConfig.model_validate(
+        {
+            "upstream": {"base_url": "http://up/v1"},
+            "rules": [
+                {
+                    "name": "r",
+                    "match": {"messages_regex": ["test"]},
+                    "transforms": [
+                        {
+                            "type": "regex_replace",
+                            "target": "user",
+                            "pattern": "test",
+                            "replacement": "test[skill]",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    body = {"messages": [{"role": "user", "content": "please test this"}]}
+    out = apply_rules(body, config)
+    assert out["messages"][0]["content"] == "please test[skill] this"
+
+
 def test_route_sets_model_and_upstream_marker() -> None:
     config = ContextOverlayConfig.model_validate(
         {

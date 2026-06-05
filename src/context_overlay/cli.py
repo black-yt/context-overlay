@@ -23,3 +23,7 @@ def main() -> None:
         config = load_config(args.config)
         app = create_app(config)
         uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
+
+
+if __name__ == "__main__":
+    main()

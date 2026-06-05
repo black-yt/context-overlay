@@ -90,10 +90,12 @@ def apply_transform(body: dict[str, Any], transform: TransformConfig) -> dict[st
         if transform.upstream_base_url:
             body["_context_overlay_upstream_base_url"] = transform.upstream_base_url
         return body
-    if transform.type in {"prepend_system", "append_system", "insert_before", "insert_after", "regex_replace"}:
+    if transform.type in {"prepend_system", "append_system"}:
         target = ensure_system_message(messages)
     elif transform.type in {"prepend_user", "append_user"}:
         target = ensure_last_user_message(messages)
+    elif transform.type in {"insert_before", "insert_after", "regex_replace"}:
+        target = ensure_last_user_message(messages) if transform.target == "user" else ensure_system_message(messages)
     else:
         raise ValueError(f"Unsupported transform type: {transform.type}")
 

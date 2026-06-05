@@ -1,0 +1,33 @@
+upstream:
+  base_url: "http://127.0.0.1:8010/v1"
+  api_key: "unused"
+
+auth:
+  api_key: "proxy-key"
+
+rules:
+  - name: science_skill_overlay
+    match:
+      path: "/v1/chat/completions"
+      messages_regex:
+        - "scientific"
+    transforms:
+      - type: insert_before
+        target: system
+        pattern: "Current date:"
+        content:
+          type: skill_dir
+          path: "./skills/generated_skills"
+          top_k: 3
+          max_chars: 24000
+
+  - name: prompt_patch_example
+    match:
+      path: "/v1/chat/completions"
+      messages_regex:
+        - "old phrase"
+    transforms:
+      - type: regex_replace
+        target: system
+        pattern: "old phrase"
+        replacement: "new phrase"

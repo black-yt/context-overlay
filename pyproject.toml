@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "context-overlay"
+dynamic = ["version"]
+description = "OpenAI-compatible context overlay proxy for injecting skills, memory, policies, and prompt patches."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "InternScience" },
+]
+keywords = [
+  "llm",
+  "openai",
+  "proxy",
+  "prompt",
+  "context",
+  "middleware",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "fastapi>=0.110",
+  "httpx>=0.27",
+  "pydantic>=2",
+  "PyYAML>=6",
+  "uvicorn[standard]>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1",
+  "pytest>=8",
+  "respx>=0.21",
+  "twine>=5",
+]
+
+[project.urls]
+Homepage = "https://github.com/black-yt/context-overlay"
+Repository = "https://github.com/black-yt/context-overlay"
+Issues = "https://github.com/black-yt/context-overlay/issues"
+
+[project.scripts]
+context-overlay = "context_overlay.cli:main"
+
+[tool.setuptools.dynamic]
+version = { file = ["VERSION"] }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

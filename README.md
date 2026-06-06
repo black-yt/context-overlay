@@ -786,6 +786,40 @@ For other `/v1/*` endpoints, request content is forwarded without rule transform
 
 Streaming requests are supported by forwarding upstream streaming bytes.
 
+## Runtime Logs
+
+Every `POST /v1/chat/completions` request emits one structured overlay decision
+log line through uvicorn's normal logs.
+
+When no rule matches:
+
+```text
+context_overlay event=no_rule_matched path=/v1/chat/completions model=gpt-5.5 rules_checked=40
+```
+
+When a rule matches:
+
+```text
+context_overlay event=rule_matched path=/v1/chat/completions model=gpt-5.5 rule=inject_Earth_000_planning_skill transform_count=1 transforms=type=insert_before;target=system;pattern=yes;content=file:/path/to/rendered_skill.md
+```
+
+The log format is intentionally key-value style:
+
+- `event`: `rule_matched` or `no_rule_matched`.
+- `path`: request path.
+- `model`: request model field.
+- `rule`: matched rule name, only present for `rule_matched`.
+- `rules_checked`: total configured rule count, only present for `no_rule_matched`.
+- `transform_count`: number of transforms in the matched rule.
+- `transforms`: compact transform summaries, including transform type, target, pattern usage, route marker, and content source.
+
+Content source summaries are safe and structural:
+
+- Inline string content is logged as `content=inline_text`.
+- File content is logged as `content=file:/path/to/file`.
+- Skill directory content is logged as `content=skill_dir:/path:top_k=N`.
+- Missing content is logged as `content=none`.
+
 ## Security Notes
 
 - Use `auth.api_key` before exposing the proxy publicly.
@@ -802,6 +836,12 @@ pytest -q
 python -m build
 python -m twine check dist/*
 ```
+
+Local private configs or data can be kept under paths whose names start with
+`local_`, for example `local_rcb_skills/` or `examples/local_config.yaml`.
+These are ignored by git and should not be used for public examples. Public
+examples should stay under `examples/` without private paths, API keys, internal
+IP addresses, or user-specific data.
 
 PyPI release is handled by GitHub Actions on published GitHub releases. The
 workflow expects repository secret:

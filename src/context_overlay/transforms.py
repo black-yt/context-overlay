@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,41 @@ from typing import Any
 from .config import ContentSourceConfig, ContextOverlayConfig, TransformConfig
 from .matching import message_text, request_matches
 from .skills import SkillStore, render_skills
+
+LOGGER = logging.getLogger(__name__)
+UVICORN_LOGGER = logging.getLogger("uvicorn.error")
+
+
+def _log_info(message: str, *args: Any) -> None:
+    LOGGER.info(message, *args)
+    UVICORN_LOGGER.info(message, *args)
+
+
+def _content_source_summary(content: str | ContentSourceConfig | None) -> str:
+    if content is None:
+        return "none"
+    if isinstance(content, str):
+        return "inline_text"
+    if content.type == "file":
+        return f"file:{content.path}"
+    if content.type == "skill_dir":
+        return f"skill_dir:{content.path}:top_k={content.top_k}"
+    return content.type
+
+
+def _transform_summary(transform: TransformConfig) -> str:
+    parts = [
+        f"type={transform.type}",
+        f"target={transform.target}",
+    ]
+    if transform.pattern:
+        parts.append("pattern=yes")
+    if transform.model:
+        parts.append(f"model={transform.model}")
+    if transform.upstream_base_url:
+        parts.append("route_upstream=yes")
+    parts.append(f"content={_content_source_summary(transform.content)}")
+    return ";".join(parts)
 
 
 def ensure_messages(body: dict[str, Any]) -> list[dict[str, Any]]:
@@ -124,9 +160,28 @@ def apply_transform(body: dict[str, Any], transform: TransformConfig) -> dict[st
 
 def apply_rules(body: dict[str, Any], config: ContextOverlayConfig, path: str = "/v1/chat/completions") -> dict[str, Any]:
     transformed = copy.deepcopy(body)
+    model = str(transformed.get("model", ""))
+    matched = 0
     for rule in config.rules:
         if not request_matches(path, transformed, rule.match):
             continue
+        matched += 1
+        transforms = " | ".join(_transform_summary(transform) for transform in rule.transforms)
+        _log_info(
+            "context_overlay event=rule_matched path=%s model=%s rule=%s transform_count=%s transforms=%s",
+            path,
+            model,
+            rule.name,
+            len(rule.transforms),
+            transforms,
+        )
         for transform in rule.transforms:
             transformed = apply_transform(transformed, transform)
+    if matched == 0:
+        _log_info(
+            "context_overlay event=no_rule_matched path=%s model=%s rules_checked=%s",
+            path,
+            model,
+            len(config.rules),
+        )
     return transformed

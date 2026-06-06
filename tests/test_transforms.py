@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from context_overlay.config import ContextOverlayConfig
@@ -47,6 +48,52 @@ def test_insert_before_uses_pattern() -> None:
     body = {"messages": [{"role": "system", "content": "Base\n\nCurrent date: 2026"}]}
     out = apply_rules(body, config)
     assert "Overlay\n\nCurrent date:" in out["messages"][0]["content"]
+
+
+def test_apply_rules_logs_matched_rule(caplog) -> None:
+    config = ContextOverlayConfig.model_validate(
+        {
+            "upstream": {"base_url": "http://up/v1"},
+            "rules": [
+                {
+                    "name": "inject_demo",
+                    "match": {"messages_regex": ["hello"]},
+                    "transforms": [{"type": "append_system", "content": "Injected"}],
+                }
+            ],
+        }
+    )
+    body = {"model": "demo-model", "messages": [{"role": "user", "content": "hello"}]}
+    with caplog.at_level(logging.INFO, logger="context_overlay.transforms"):
+        apply_rules(body, config, path="/v1/chat/completions")
+    assert "context_overlay event=rule_matched" in caplog.text
+    assert "path=/v1/chat/completions" in caplog.text
+    assert "model=demo-model" in caplog.text
+    assert "rule=inject_demo" in caplog.text
+    assert "transform_count=1" in caplog.text
+    assert "type=append_system;target=system" in caplog.text
+
+
+def test_apply_rules_logs_no_match(caplog) -> None:
+    config = ContextOverlayConfig.model_validate(
+        {
+            "upstream": {"base_url": "http://up/v1"},
+            "rules": [
+                {
+                    "name": "inject_demo",
+                    "match": {"messages_regex": ["hello"]},
+                    "transforms": [{"type": "append_system", "content": "Injected"}],
+                }
+            ],
+        }
+    )
+    body = {"model": "demo-model", "messages": [{"role": "user", "content": "plain"}]}
+    with caplog.at_level(logging.INFO, logger="context_overlay.transforms"):
+        apply_rules(body, config, path="/v1/chat/completions")
+    assert "context_overlay event=no_rule_matched" in caplog.text
+    assert "path=/v1/chat/completions" in caplog.text
+    assert "model=demo-model" in caplog.text
+    assert "rules_checked=1" in caplog.text
 
 
 def test_skill_dir_content_source(tmp_path: Path) -> None:

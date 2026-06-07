@@ -66,7 +66,8 @@ def test_apply_rules_logs_matched_rule(caplog) -> None:
     body = {"model": "demo-model", "messages": [{"role": "user", "content": "hello"}]}
     with caplog.at_level(logging.INFO, logger="context_overlay.transforms"):
         apply_rules(body, config, path="/v1/chat/completions")
-    assert "context_overlay event=rule_matched" in caplog.text
+    assert "context_overlay timestamp=" in caplog.text
+    assert "event=rule_matched" in caplog.text
     assert "path=/v1/chat/completions" in caplog.text
     assert "model=demo-model" in caplog.text
     assert "rule=inject_demo" in caplog.text
@@ -90,7 +91,8 @@ def test_apply_rules_logs_no_match(caplog) -> None:
     body = {"model": "demo-model", "messages": [{"role": "user", "content": "plain"}]}
     with caplog.at_level(logging.INFO, logger="context_overlay.transforms"):
         apply_rules(body, config, path="/v1/chat/completions")
-    assert "context_overlay event=no_rule_matched" in caplog.text
+    assert "context_overlay timestamp=" in caplog.text
+    assert "event=no_rule_matched" in caplog.text
     assert "path=/v1/chat/completions" in caplog.text
     assert "model=demo-model" in caplog.text
     assert "rules_checked=1" in caplog.text

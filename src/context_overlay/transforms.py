@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,10 @@ UVICORN_LOGGER = logging.getLogger("uvicorn.error")
 def _log_info(message: str, *args: Any) -> None:
     LOGGER.info(message, *args)
     UVICORN_LOGGER.info(message, *args)
+
+
+def _log_timestamp() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def _content_source_summary(content: str | ContentSourceConfig | None) -> str:
@@ -168,7 +173,8 @@ def apply_rules(body: dict[str, Any], config: ContextOverlayConfig, path: str = 
         matched += 1
         transforms = " | ".join(_transform_summary(transform) for transform in rule.transforms)
         _log_info(
-            "context_overlay event=rule_matched path=%s model=%s rule=%s transform_count=%s transforms=%s",
+            "context_overlay timestamp=%s event=rule_matched path=%s model=%s rule=%s transform_count=%s transforms=%s",
+            _log_timestamp(),
             path,
             model,
             rule.name,
@@ -179,7 +185,8 @@ def apply_rules(body: dict[str, Any], config: ContextOverlayConfig, path: str = 
             transformed = apply_transform(transformed, transform)
     if matched == 0:
         _log_info(
-            "context_overlay event=no_rule_matched path=%s model=%s rules_checked=%s",
+            "context_overlay timestamp=%s event=no_rule_matched path=%s model=%s rules_checked=%s",
+            _log_timestamp(),
             path,
             model,
             len(config.rules),

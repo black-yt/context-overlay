@@ -791,21 +791,25 @@ Streaming requests are supported by forwarding upstream streaming bytes.
 Every `POST /v1/chat/completions` request emits one structured overlay decision
 log line through uvicorn's normal logs.
 
+The `timestamp` field is the local-time ISO-8601 timestamp for the overlay
+decision. It is not the upstream model response time.
+
 When no rule matches:
 
 ```text
-context_overlay event=no_rule_matched path=/v1/chat/completions model=gpt-5.5 rules_checked=40
+context_overlay timestamp=2026-06-07T10:20:30+08:00 event=no_rule_matched path=/v1/chat/completions model=gpt-5.5 rules_checked=40
 ```
 
 When a rule matches:
 
 ```text
-context_overlay event=rule_matched path=/v1/chat/completions model=gpt-5.5 rule=inject_Earth_000_planning_skill transform_count=1 transforms=type=insert_before;target=system;pattern=yes;content=file:/path/to/rendered_skill.md
+context_overlay timestamp=2026-06-07T10:20:30+08:00 event=rule_matched path=/v1/chat/completions model=gpt-5.5 rule=inject_Earth_000_planning_skill transform_count=1 transforms=type=insert_before;target=system;pattern=yes;content=file:/path/to/rendered_skill.md
 ```
 
 The log format is intentionally key-value style:
 
 - `event`: `rule_matched` or `no_rule_matched`.
+- `timestamp`: local timezone ISO-8601 timestamp emitted when the overlay decision is logged.
 - `path`: request path.
 - `model`: request model field.
 - `rule`: matched rule name, only present for `rule_matched`.
@@ -813,12 +817,19 @@ The log format is intentionally key-value style:
 - `transform_count`: number of transforms in the matched rule.
 - `transforms`: compact transform summaries, including transform type, target, pattern usage, route marker, and content source.
 
+If multiple rules match one request, context-overlay emits one `rule_matched`
+line for each matched rule. If no rule matches, it emits exactly one
+`no_rule_matched` line.
+
 Content source summaries are safe and structural:
 
 - Inline string content is logged as `content=inline_text`.
 - File content is logged as `content=file:/path/to/file`.
 - Skill directory content is logged as `content=skill_dir:/path:top_k=N`.
 - Missing content is logged as `content=none`.
+
+Runtime logs are intentionally structural. They do not include request bodies,
+prompt text, API keys, or inline content values.
 
 ## Security Notes
 

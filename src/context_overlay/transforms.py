@@ -149,12 +149,12 @@ def apply_transform(body: dict[str, Any], transform: TransformConfig) -> dict[st
         if not transform.pattern:
             target["content"] = _join(overlay, content)
         else:
-            target["content"] = re.sub(transform.pattern, overlay + "\n\n" + r"\g<0>", content, count=1)
+            target["content"] = re.sub(transform.pattern, lambda match: overlay + "\n\n" + match.group(0), content, count=1)
     elif transform.type == "insert_after":
         if not transform.pattern:
             target["content"] = _join(content, overlay)
         else:
-            target["content"] = re.sub(transform.pattern, r"\g<0>" + "\n\n" + overlay, content, count=1)
+            target["content"] = re.sub(transform.pattern, lambda match: match.group(0) + "\n\n" + overlay, content, count=1)
     elif transform.type == "regex_replace":
         if not transform.pattern:
             raise ValueError("regex_replace requires pattern")

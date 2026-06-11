@@ -50,6 +50,57 @@ def test_insert_before_uses_pattern() -> None:
     assert "Overlay\n\nCurrent date:" in out["messages"][0]["content"]
 
 
+def test_insert_before_treats_overlay_backslashes_as_literal_text() -> None:
+    config = ContextOverlayConfig.model_validate(
+        {
+            "upstream": {"base_url": "http://up/v1"},
+            "rules": [
+                {
+                    "name": "r",
+                    "match": {},
+                    "transforms": [
+                        {
+                            "type": "insert_before",
+                            "target": "system",
+                            "pattern": "Current date:",
+                            "content": r"Use $b\ln(a)$ and path C:\data literally.",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    body = {"messages": [{"role": "system", "content": "Base\n\nCurrent date: 2026"}]}
+    out = apply_rules(body, config)
+    assert r"Use $b\ln(a)$ and path C:\data literally." in out["messages"][0]["content"]
+    assert "Current date: 2026" in out["messages"][0]["content"]
+
+
+def test_insert_after_treats_overlay_backslashes_as_literal_text() -> None:
+    config = ContextOverlayConfig.model_validate(
+        {
+            "upstream": {"base_url": "http://up/v1"},
+            "rules": [
+                {
+                    "name": "r",
+                    "match": {},
+                    "transforms": [
+                        {
+                            "type": "insert_after",
+                            "target": "system",
+                            "pattern": "Role prompt:",
+                            "content": r"Use $\alpha + \beta$ literally.",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    body = {"messages": [{"role": "system", "content": "Role prompt:\nBase"}]}
+    out = apply_rules(body, config)
+    assert r"Role prompt:" + "\n\n" + r"Use $\alpha + \beta$ literally." in out["messages"][0]["content"]
+
+
 def test_apply_rules_logs_matched_rule(caplog) -> None:
     config = ContextOverlayConfig.model_validate(
         {

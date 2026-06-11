@@ -395,6 +395,9 @@ transforms:
 
 If `pattern` is omitted, this behaves like `prepend_system`.
 
+The inserted content is treated as literal text. Markdown, LaTeX such as
+`$b\ln(a)$`, and paths containing backslashes are inserted unchanged.
+
 ### `insert_after`
 
 Insert content after the first regex match in the system message.
@@ -407,6 +410,8 @@ transforms:
 ```
 
 If `pattern` is omitted, this behaves like `append_system`.
+
+The inserted content is treated as literal text, the same as `insert_before`.
 
 ### `regex_replace`
 
